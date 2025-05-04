@@ -1,33 +1,33 @@
-### code for server
+# simple_server.py
+
 import socket
+from ggame.game import generate_random, get_difficulty, check_guess
 
-# Create a socket object
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# Bind the socket to a specific address and port
+host, port = 'localhost', 12345
+banner = b"\n====GUESSING GAME===\nenter guess:"
 
-server_socket.bind(('localhost', 12345))
-
-# Listen for incoming connections (maximum 5 queued connections)
-server_socket.listen(5)
-
-print('Server listening on port 12345...')
+s = socket.socket()
+s.bind((host, port))
+s.listen(5)
+print(f"Server listening on {host}:{port}")
 
 while True:
-    # Accept incoming client connections
-    client_socket, client_address = server_socket.accept()
-    print('Accepted connection from {}:{}'.format(client_address[0], client_address[1]))
+    conn, addr = s.accept()
+    difficulty = get_difficulty(conn)
+    answer = generate_random(difficulty)
+    conn.sendall(banner)
 
-    # Receive data from the client
-    data = client_socket.recv(1024)
-    if not data:
-        break
-    # Print received data and send a response back to the client
-    print('Received data: {}'.format(data.decode()))
-    response = 'Hello, Client! Thank you for your message.'
-    client_socket.send(response.encode())
-
-    # Close the client socket
-    client_socket.close()
-
-# Close the server socket
-server_socket.close()
+    while True:
+        data = conn.recv(1024)
+        if not data:
+            break
+        guess = int(data.decode().strip())
+        res = check_guess(guess, answer)
+        if res == "correct":
+            conn.sendall(b"CORRECT!")
+            break
+        elif res == "lower":
+            conn.sendall(b"=Guess Lower\nenter guess: ")
+        else:
+            conn.sendall(b"=Guess Higher\nenter guess: ")
+    conn.close()
